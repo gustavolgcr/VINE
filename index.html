@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+
+<html>
+	
+	<meta charset="utf-8">
+	
+	<style>
+
+		.link {
+			stroke: #999;
+			stroke-opacity: .6;
+		}
+
+		.node text {
+			pointer-events: none;
+			font: 10px sans-serif;
+		}
+
+		.chart {
+			width: 960px;
+			height:500px;
+			border:2px solid;
+			margin:0 auto;
+		}
+
+	</style>
+	
+	<body>
+
+  		<h1 align="center">
+
+			Network Topology - Rev. 2 (Partial)
+
+  		</h1>
+
+		<div class="chart">  
+
+	        <script src="d3.v3.js"></script>
+
+	        <script>
+
+                var width = 960,
+                    height = 500
+
+                var svg = d3.select("div")
+                			.append("svg")
+                    		.attr("width", "100%")
+                    		.attr("height", "100%");
+                
+                var force = d3.layout.force()
+                    		  .gravity(.05)
+                    		  .distance(100)
+                    		  .charge(-200)
+                    		  .size([width, height]);
+
+                d3.json("vms.json", function(json) {
+                	
+                	var nodes = new Array();
+
+                	var links = new Array();
+
+                	for(var prop in json.vms) {
+
+                		for(var prop2 in json.vms[prop].ni_obj) {
+
+                			var counter = 0;
+
+                			for(var prop3 in json.gateways) {
+
+                				if(json.vms[prop].ni_obj[prop2].ip_address == json.gateways[prop3].gateway) {
+
+                					counter = counter +1;
+
+                					var obj = {
+
+		                				id: json.vms[prop].ni_obj[prop2].ip_address,
+		                				netmask: json.gateways[prop3].netmask
+	                				
+	                				}
+
+	                				nodes.push(obj);
+
+                				} 
+
+
+                			}
+                			
+                			if (counter == 0) {
+
+	            				var obj = {
+		                				
+		                				id: json.vms[prop].ni_obj[prop2].ip_address,
+		                				netmask: "NOT_APPLICABLE"
+	                			
+	                			}
+
+	                			nodes.push(obj);
+
+                			}
+
+                		}
+                		
+                	}
+
+                	for(var prop in json.gateways) {
+                	
+                		if(json.gateways[prop].is_vm == false) {
+
+                			var obj = {
+
+                				id: json.gateways[prop].gateway,
+                				netmask: json.gateways[prop].netmask
+
+                			}
+
+                			nodes.push(obj);	
+
+                		}
+
+                	}
+
+                	console.log(nodes);
+
+                	// Here we start to create all links between the links
+                	for(var prop in json.vms) {
+                		
+                		var counter =0;
+                		var prop_aux = prop;
+                		
+                		for(var prop2 in json.vms[prop].ni_obj) {
+                			
+                			counter = counter +1;
+
+                			if(counter == 1) {
+                				
+                				prop_aux = prop2;
+                			
+                			}
+                			
+                			var node_gateway = json.vms[prop].ni_obj[prop2].gateway_id;
+			                
+		                	for(var prop3 in json.gateways) {
+		                	
+		                		if(node_gateway == prop3) {
+
+		                			var obj = {
+
+		                				source: json.vms[prop].ni_obj[prop_aux].ip_address,
+		                				target: json.gateways[prop3].gateway
+		                			
+		                			}
+
+		                			links.push(obj);
+
+		                		}
+		                			
+		                	}		                			
+
+                		}
+
+                	}
+                	
+	                force
+	                	.nodes(nodes)
+	                	.links(links)
+	                	.start();
+					
+	                var link = svg.selectAll(".link")
+		                		  .data(links)
+		                		  .enter().append("line")
+		                		  .attr("class", "link");
+
+	                var node = svg.selectAll(".node")
+		                		  .data(nodes)
+		                		  .enter().append("g")
+		                		  .attr("class", "node")
+		                		  .call(force.drag);
+
+	                node.append("image")
+		                .attr("xlink:href", "computer.png")
+		                .attr("x", -16)
+		                .attr("y", -16)
+		                .attr("width", 32)
+		                .attr("height", 32);
+
+	                node.append("text")
+		                .attr("dx", 20)
+		                .attr("dy", 0)
+		                .text(function(d) { 
+
+		                	if(d.netmask == "NOT_APPLICABLE") {
+		                		
+		                		return;
+
+		                	} else {
+
+		                		return d.id + "/" + d.netmask
+		                	}
+		                
+		                });
+		                
+	                force.on("tick", function() {
+		                
+		                link.attr("x1", function(d) { return d.source.x; })
+			                .attr("y1", function(d) { return d.source.y; })
+			                .attr("x2", function(d) { return d.target.x; })
+			                .attr("y2", function(d) { return d.target.y; });
+
+	                	node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+	                
+	                });
+                
+                });
+
+	        </script>
+
+		</div>
+
+	</body>
+	
+</html>
